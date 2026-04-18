@@ -3,6 +3,8 @@ import os
 import dj_database_url
 from pathlib import Path
 from dotenv import load_dotenv
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 load_dotenv()
 
@@ -26,6 +28,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'vunoh.settings.DisableCSRFMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Add for static files
@@ -93,3 +96,12 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Groq API
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+
+class DisableCSRFMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith('/api/'):
+            setattr(request, '_dont_enforce_csrf_checks', True)
+        return self.get_response(request)

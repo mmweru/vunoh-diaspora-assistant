@@ -1,14 +1,5 @@
-"""
-API Views for Vunoh Diaspora Assistant.
-
-Endpoints:
-  POST /api/tasks/          — create a new task from a customer message
-  GET  /api/tasks/          — list all tasks (dashboard)
-  GET  /api/tasks/<code>/   — retrieve a single task with full details
-  PATCH /api/tasks/<code>/status/ — update task status
-  GET  /api/tasks/stats/    — dashboard summary statistics
-"""
-
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 import logging
 from django.db.models import Count
 from rest_framework.views import APIView
@@ -27,6 +18,7 @@ from .assignment_service import assign_team
 logger = logging.getLogger(__name__)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TaskListCreateView(APIView):
     """
     GET  /api/tasks/  — list all tasks
@@ -144,6 +136,7 @@ class TaskListCreateView(APIView):
             )
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TaskDetailView(APIView):
     """
     GET /api/tasks/<task_code>/ — retrieve full task details
@@ -161,6 +154,7 @@ class TaskDetailView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TaskStatusUpdateView(APIView):
     """
     PATCH /api/tasks/<task_code>/status/ — update task status
@@ -210,6 +204,7 @@ class TaskStatusUpdateView(APIView):
         })
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class DashboardStatsView(APIView):
     """
     GET /api/tasks/stats/ — summary stats for the dashboard header
