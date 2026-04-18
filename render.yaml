@@ -2,8 +2,9 @@ services:
   - type: web
     name: vunoh-diaspora-assistant
     runtime: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && python manage.py migrate && gunicorn vunoh.wsgi:application --bind 0.0.0.0:$PORT
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn vunoh.wsgi:application
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -11,8 +12,10 @@ services:
         value: False
       - key: ALLOWED_HOSTS
         value: .onrender.com
-      - key: GEMINI_API_KEY
-        sync: false  # You enter this manually in Render dashboard
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: DATABASE_URL
         fromDatabase:
           name: vunoh-db

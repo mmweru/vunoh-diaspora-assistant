@@ -105,3 +105,5 @@ class DisableCSRFMiddleware:
         if request.path.startswith('/api/'):
             setattr(request, '_dont_enforce_csrf_checks', True)
         return self.get_response(request)
+# Ensure whitenoise is properly configured for production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
