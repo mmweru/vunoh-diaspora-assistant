@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vunoh Global | Diaspora Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-emblem"><span>V</span></div>
+    <div class="sidebar-brand-wrap">
+      <div class="sidebar-brand">THE GILDED ANCHOR</div>
+      <div class="sidebar-tagline">Premium Diaspora Assistant</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="snav-link" data-page="dashboard" onclick="navigate('dashboard')">
+      <span class="material-symbols-outlined">grid_view</span><span>Dashboard</span>
+    </a>
+    <a class="snav-link" data-page="new" onclick="navigate('new')">
+      <span class="material-symbols-outlined">description</span><span>New Request</span>
+    </a>
+    <a class="snav-link" data-page="tracking" onclick="navigate('tracking')">
+      <span class="material-symbols-outlined">analytics</span><span>Risk Monitor</span>
+    </a>
+    <a class="snav-link" data-page="requests" onclick="navigate('requests')">
+      <span class="material-symbols-outlined">format_list_bulleted</span><span>All Tasks</span>
+    </a>
+    <a class="snav-link" href="#" onclick="showToast('Support coming soon','info');return false;">
+      <span class="material-symbols-outlined">help_outline</span><span>Support</span>
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="snav-new-btn" onclick="navigate('new')">
+      <span class="material-symbols-outlined">add</span>New Request
+    </button>
+    <div class="kenyan-stripe"></div>
+  </div>
+</aside>
+
+<!-- MOBILE TOPBAR -->
+<header class="mobile-bar">
+  <button class="icon-btn" onclick="toggleSidebar()">
+    <span class="material-symbols-outlined">menu</span>
+  </button>
+  <span class="mobile-brand">Vunoh Global</span>
+  <button class="icon-btn" onclick="toggleNotifications()">
+    <span class="material-symbols-outlined">notifications</span>
+    <span class="notif-badge" id="notifBadge" style="display:none;"></span>
+  </button>
+</header>
+
+<!-- DESKTOP TOPBAR -->
+<header class="topbar" id="topbar">
+  <nav class="topbar-nav">
+    <button class="tnav-btn" data-page="dashboard" onclick="navigate('dashboard')">Dashboard</button>
+    <button class="tnav-btn" data-page="new" onclick="navigate('new')">Requests</button>
+    <button class="tnav-btn" data-page="tracking" onclick="navigate('tracking')">Tracking</button>
+    <button class="tnav-btn" data-page="requests" onclick="navigate('requests')">Archive</button>
+  </nav>
+  <div class="topbar-right">
+    <div class="search-wrap">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" placeholder="Search mandates..." id="globalSearch" oninput="doGlobalSearch(this.value)"/>
+    </div>
+    <button class="icon-btn" onclick="toggleNotifications()">
+      <span class="material-symbols-outlined">notifications</span>
+      <span class="notif-badge" id="notifBadgeD" style="display:none;"></span>
+    </button>
+    <button class="icon-btn"><span class="material-symbols-outlined">settings</span></button>
+    <div class="avatar-wrap"><div class="avatar">KD</div></div>
+  </div>
+</header>
+
+<!-- NOTIFICATIONS PANEL -->
+<div class="notif-overlay" id="notifOverlay" onclick="toggleNotifications()"></div>
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-hdr">
+    <span class="notif-title">Notifications</span>
+    <button class="icon-btn" onclick="toggleNotifications()"><span class="material-symbols-outlined">close</span></button>
+  </div>
+  <div id="notifList"><p class="notif-empty">No notifications yet</p></div>
+</div>
+
+<!-- MAIN CANVAS -->
+<main class="canvas" id="canvas">
+
+  <!-- PAGE: DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="pg">
+      <header class="pg-header">
+        <div>
+          <p class="pg-eyebrow">Operation Center Alpha</p>
+          <h1 class="pg-title">Vunoh <span class="gold">Dashboard</span></h1>
+          <p class="pg-sub">Real-time governance and mandate oversight for the Kenyan Diaspora.</p>
+        </div>
+        <div class="status-chip">
+          <span class="pulse-dot"></span>ALL NODES OPTIMAL
+        </div>
+      </header>
+
+      <!-- BENTO STATS -->
+      <div class="bento" id="bentoStats">
+        <div class="bento-a bento-card">
+          <p class="bento-lbl">Efficiency Rating</p>
+          <div class="bento-big gold" id="effNum">—</div>
+          <p class="bento-hint" id="effHint">Calculating...</p>
+          <span class="material-symbols-outlined bento-ghost">bolt</span>
+        </div>
+        <div class="bento-b bento-card">
+          <p class="bento-lbl">Active Mandates</p>
+          <div class="bento-big" id="totalNum">—</div>
+          <div class="mini-pips" id="miniPips"></div>
+        </div>
+        <div class="bento-c bento-card">
+          <p class="bento-lbl">Network Health</p>
+          <p class="bento-accent" id="nodeCount">8 ACTIVE NODES</p>
+          <div class="bar-chart" id="barChart"></div>
+          <div class="bar-labels"><span>00:00</span><span>12:00</span><span>CURRENT</span></div>
+        </div>
+        <div class="bento-d bento-card">
+          <p class="bento-lbl">High Risk Tasks</p>
+          <div class="bento-big red" id="highRiskNum">—</div>
+          <p class="bento-hint">Require review</p>
+          <span class="material-symbols-outlined bento-ghost">warning</span>
+        </div>
+      </div>
+
+      <!-- LEDGER TABLE -->
+      <div class="ledger">
+        <div class="ledger-top">
+          <div class="ledger-left">
+            <h2 class="ledger-h">Active Task Ledger</h2>
+            <span class="live-chip">Live Feed</span>
+          </div>
+          <div class="ledger-right">
+            <select class="ctrl-sel" id="dashStatusFilter" onchange="loadDashboard()">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+            <button class="ctrl-btn" onclick="loadDashboard()">
+              <span class="material-symbols-outlined">refresh</span>
+            </button>
+          </div>
+        </div>
+        <div class="ledger-scroll">
+          <table class="ltable">
+            <thead><tr>
+              <th>Task Identity</th><th>Status</th><th>Risk Assessment</th>
+              <th>Team</th><th>Task ID</th><th class="text-right">Actions</th>
+            </tr></thead>
+            <tbody id="ledgerBody">
+              <tr><td colspan="6" class="tload"><div class="spinner-sm"></div> Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: NEW REQUEST -->
+  <div class="page hidden" id="page-new">
+    <div class="pg pg-narrow">
+      <header class="pg-header">
+        <div class="kenyan-line"></div>
+        <p class="pg-eyebrow">Concierge Command</p>
+        <h1 class="pg-title-xl">What shall we <em class="gold">anchor</em> today?</h1>
+        <p class="pg-sub">Speak your intent. From asset management in Nairobi to medical checkups in Eldoret — your bridge to Kenya is just a message away.</p>
+      </header>
+
+      <!-- COMMAND BOX -->
+      <div class="cmd-box" id="cmdBox">
+        <textarea id="requestInput" class="cmd-textarea"
+          placeholder="e.g. 'Send KES 30,000 to my mother Grace Akinyi in Kisumu. M-Pesa: 0712345678. Urgent.'"
+          rows="4"></textarea>
+        <div class="cmd-footer">
+          <div class="cmd-footer-left">
+            <button class="cmd-attach-btn">
+              <span class="material-symbols-outlined">attach_file</span>Add Reference
+            </button>
+            <button class="cmd-attach-btn">
+              <span class="material-symbols-outlined">schedule</span>Schedule
+            </button>
+          </div>
+          <button class="dispatch-btn" id="submitBtn" onclick="submitRequest()">
+            Dispatch Request <span class="material-symbols-outlined">send</span>
+          </button>
+        </div>
+        <div class="char-bar">
+          <span class="char-count" id="charCount">0 / 2000</span>
+        </div>
+
+        <!-- ENTITY FORM (shown after AI extracts, lets user edit) -->
+        <div class="entity-form" id="entityForm" style="display:none;">
+          <div class="ef-header">
+            <span class="material-symbols-outlined">tune</span>
+            <span>AI extracted these details — confirm or edit before creating task:</span>
+          </div>
+          <div class="ef-grid" id="efGrid"></div>
+          <button class="confirm-btn" onclick="confirmAndCreate()">
+            <span class="material-symbols-outlined">check_circle</span>
+            Confirm &amp; Create Task
+          </button>
+        </div>
+
+        <!-- CHIPS -->
+        <div class="chips-block">
+          <p class="chips-lbl">Frequent Intentions</p>
+          <div class="chips-row">
+            <button class="chip" onclick="useExample(this)">Property Verification</button>
+            <button class="chip" onclick="useExample(this)">Express Remittance</button>
+            <button class="chip" onclick="useExample(this)">Land Surveying</button>
+            <button class="chip" onclick="useExample(this)">Legal Consult</button>
+            <button class="chip" onclick="useExample(this)">Airport Transfer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI LOADING -->
+      <div class="ai-loader" id="aiLoader" style="display:none;">
+        <div class="orb-wrap">
+          <div class="orb"><div class="orb-r1"></div><div class="orb-r2"></div><div class="orb-r3"></div><span>AI</span></div>
+        </div>
+        <div class="ai-steps-list">
+          <div class="ai-step" id="ais1"><span class="ais-dot"></span><span>Extracting intent &amp; entities</span></div>
+          <div class="ai-step" id="ais2"><span class="ais-dot"></span><span>Calculating risk score</span></div>
+          <div class="ai-step" id="ais3"><span class="ais-dot"></span><span>Generating fulfilment steps</span></div>
+          <div class="ai-step" id="ais4"><span class="ais-dot"></span><span>Drafting confirmation messages</span></div>
+        </div>
+      </div>
+
+      <!-- RESULT CARD -->
+      <div id="resultArea" style="display:none;"></div>
+
+      <!-- RECENT ANCHORS -->
+      <section class="recent-sec">
+        <div class="recent-hdr">
+          <div>
+            <h2 class="recent-h">Recent Anchors</h2>
+            <p class="recent-sub">Tracking your current operations on the ground.</p>
+          </div>
+          <button class="view-all" onclick="navigate('requests')">View All →</button>
+        </div>
+        <div class="recent-grid" id="recentGrid">
+          <p class="recent-loading">Loading recent tasks...</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- PAGE: TRACKING -->
+  <div class="page hidden" id="page-tracking">
+    <div class="pg">
+      <header class="track-hdr">
+        <div>
+          <h1 class="pg-title">Track Task<span class="gold">.</span></h1>
+          <p class="pg-sub">Real-time oversight for your Kenyan assets and logistical requests.</p>
+        </div>
+        <div class="track-search-box">
+          <label class="track-lbl">Search Task Code</label>
+          <div class="track-row">
+            <input id="trackInput" class="track-input" type="text" placeholder="e.g. VNH-A3X9K"
+              oninput="this.value=this.value.toUpperCase()"
+              onkeydown="if(event.key==='Enter')lookupTask()"/>
+            <button class="track-go" onclick="lookupTask()">
+              <span class="material-symbols-outlined">search</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div id="trackResult">
+        <div class="track-empty">
+          <span class="material-symbols-outlined track-empty-icon">manage_search</span>
+          <p>Enter a task code above to see full details, progress, and messages.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: ALL REQUESTS -->
+  <div class="page hidden" id="page-requests">
+    <div class="pg">
+      <header class="pg-header">
+        <div>
+          <p class="pg-eyebrow">Full Archive</p>
+          <h1 class="pg-title">My <span class="gold">Requests</span></h1>
+        </div>
+        <button class="ctrl-btn" onclick="loadRequests()">
+          <span class="material-symbols-outlined">refresh</span> Refresh
+        </button>
+      </header>
+
+      <div class="filter-bar">
+        <select class="ctrl-sel" id="filterStatus" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select class="ctrl-sel" id="filterIntent" onchange="applyFilters()">
+          <option value="">All Intents</option>
+          <option value="send_money">Send Money</option>
+          <option value="hire_service">Hire Service</option>
+          <option value="verify_document">Verify Document</option>
+          <option value="get_airport_transfer">Airport Transfer</option>
+        </select>
+        <select class="ctrl-sel" id="filterRisk" onchange="applyFilters()">
+          <option value="">All Risk</option>
+          <option value="high">High Risk</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+
+      <div class="req-grid" id="reqGrid">
+        <p class="recent-loading">Loading requests...</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal" id="modalBox">
+    <button class="modal-x" onclick="closeModal()">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <div id="modalContent"><div class="modal-loading"><div class="spinner-md"></div></div></div>
+  </div>
+</div>
+
+<!-- TOAST STACK -->
+<div id="toastStack"></div>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
