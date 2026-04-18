@@ -66,32 +66,45 @@ This application provides a structured AI-powered assistant that:
 ---
 
 ## Project Structure
-
 ```
 vunoh-diaspora-assistant/
+│
 ├── backend/
-│   ├── app.py                  # Flask app entry point
-│   ├── config.py               # Configuration and env loading
-│   ├── models.py               # SQLAlchemy models
-│   ├── routes/
-│   │   ├── tasks.py            # Task creation and retrieval endpoints
-│   │   └── dashboard.py        # Dashboard and status update endpoints
-│   ├── services/
-│   │   ├── ai_service.py       # All LLM calls (intent, steps, messages)
-│   │   ├── risk_service.py     # Risk scoring logic
-│   │   └── assignment_service.py # Employee team assignment
-│   ├── prompts/
-│   │   └── system_prompt.txt   # Master system prompt for the AI
-│   └── requirements.txt
+│   ├── manage.py                          ← Django entry point
+│   ├── requirements.txt                   ← All Python dependencies
+│   ├── db.sqlite3                         ← Local database (auto-created)
+│   │
+│   ├── vunoh/                             ← Django project config
+│   │   ├── settings.py                    ← All settings
+│   │   ├── urls.py                        ← Root URL routing
+│   │   └── wsgi.py                        ← Production server entry
+│   │
+│   └── tasks/                             ← Main Django app
+│       ├── models.py                      ← Task, TaskStep, TaskMessage, StatusHistory
+│       ├── views.py                       ← API endpoints (all 4 views)
+│       ├── serializers.py                 ← DRF serializers
+│       ├── urls.py                        ← /api/tasks/ routes
+│       ├── ai_service.py                  ← Gemini AI calls + mock fallbacks
+│       ├── risk_service.py                ← Risk scoring logic
+│       ├── assignment_service.py          ← Team assignment
+│       ├── admin.py                       ← Django admin panel config
+│       ├── tests.py                       ← 31 automated tests
+│       └── management/commands/
+│           └── seed_data.py               ← python manage.py seed_data
+│
 ├── frontend/
-│   ├── index.html              # Main UI (input + dashboard)
-│   ├── style.css               # Styling
-│   └── app.js                  # API calls and DOM interactions
+│   ├── index.html                         ← Single-page application
+│   ├── style.css                          ← Full UI styles
+│   └── app.js                             ← All frontend logic (no frameworks)
+│
 ├── database/
-│   └── dump.sql                # Schema + 5 sample tasks with full data
-├── .env.example
-├── .gitignore
-└── README.md
+│   └── dump.sql                           ← Schema + 5 complete sample tasks
+│
+├── .env.example                           ← Copy this to .env
+├── .gitignore                             ← Keeps secrets and venv out of Git
+├── render.yaml                            ← Render deployment config
+├── Procfile                               ← Gunicorn start command
+└── README.md                              ← Project documentation
 ```
 
 ---
