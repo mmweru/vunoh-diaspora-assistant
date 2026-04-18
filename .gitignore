@@ -1,0 +1,185 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*
+
+# Django
+*.log
+*.pot
+*.pyc
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media
+/static
+/staticfiles
+/static_root
+/staticfiles_root
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Logs
+*.log
+logs/
+error_log/
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+.pytest
+test.db
+tests/__pycache__/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype
+.pytype/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.spyderproject
+.spyproject
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+
+# Django migrations - UNCOMMENT IF YOU WANT TO IGNORE MIGRATIONS
+# */migrations/
+# !*/migrations/__init__.py
+
+# Secrets and keys
+*.pem
+*.key
+*.crt
+secrets.json
+config/secrets.json
+
+# Package management
+pip-log.txt
+pip-delete-this-directory.txt
+pip-selfcheck.json
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Uploads
+uploads/
+media/
+staticfiles/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+*.pid
+
+# Redis
+dump.rdb
+
+# Node (if you have a frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# React/Vue build outputs
+/build
+/dist
+*.chunk.js
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+
+# Project specific
+*.pid
+*.seed
+*.sql
+*.dump
+dump.rdb
+.venv
+venv.bak/
+venv/
+backend/.env
+.env
