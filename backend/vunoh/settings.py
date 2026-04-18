@@ -1,8 +1,6 @@
-"""
-Django settings for Vunoh Diaspora Assistant.
-"""
-
+# vunoh/settings.py
 import os
+import dj_database_url
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -10,11 +8,10 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production-please')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this')
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
-
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.vercel.app').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -31,6 +28,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -44,7 +42,7 @@ ROOT_URLCONF = 'vunoh.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'frontend'],  # Serve frontend files
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -59,21 +57,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'vunoh.wsgi.application'
 
-# Database — uses SQLite locally, PostgreSQL in production
+# Database Configuration
 DATABASE_URL = os.getenv('DATABASE_URL', '')
-
-if DATABASE_URL and DATABASE_URL.startswith('postgresql'):
-    import urllib.parse as urlparse
-    url = urlparse.urlparse(DATABASE_URL)
+if DATABASE_URL:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': url.path[1:],
-            'USER': url.username,
-            'PASSWORD': url.password,
-            'HOST': url.hostname,
-            'PORT': url.port or 5432,
-        }
+        'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
     }
 else:
     DATABASES = {
@@ -83,39 +71,25 @@ else:
         }
     }
 
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
-
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Africa/Nairobi'
-USE_I18N = True
-USE_TZ = True
-
+# Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'frontend' / 'static']
+
+# Simplified static file serving
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-    ],
 }
 
-# CORS — allow the frontend to talk to the backend
-CORS_ALLOW_ALL_ORIGINS = True  # Fine for dev; tighten in production
+# CORS - Allow frontend domains
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:8000,https://vunoh-diaspora-assistant.onrender.com').split(',')
+CORS_ALLOW_CREDENTIALS = True
 
-# Gemini AI API Key
-# Groq API (free) — get key at https://console.groq.com
+# Groq API
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
-# Legacy keys kept for backwards compat
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY', '')
