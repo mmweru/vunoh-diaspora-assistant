@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: vunoh-diaspora-assistant
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python manage.py migrate && gunicorn vunoh.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: GEMINI_API_KEY
+        sync: false  # You enter this manually in Render dashboard
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vunoh-db
+          property: connectionString
+
+databases:
+  - name: vunoh-db
+    plan: free
