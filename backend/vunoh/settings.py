@@ -114,4 +114,8 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True  # Fine for dev; tighten in production
 
 # Gemini AI API Key
+# Groq API (free) — get key at https://console.groq.com
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+# Legacy keys kept for backwards compat
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY', '')

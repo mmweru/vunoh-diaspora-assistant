@@ -1,12 +1,13 @@
 /**
  * Vunoh Global — Diaspora Assistant Frontend
  * Multi-page app: Dashboard, New Request (with entity form), Tracking, All Tasks
+ * Enhanced with premium card layouts
  */
 
 const API = 'http://127.0.0.1:8000/api';
 
 let allTasks = [];
-let pendingAIResult = null; // stores AI extraction until user confirms
+let pendingAIResult = null;
 
 // ─────────────────────────────────────────────
 // NAVIGATION
@@ -27,8 +28,8 @@ function navigate(page) {
   closeSidebar();
 
   if (page === 'dashboard') loadDashboard();
-  if (page === 'new') { loadRecent(); resetNewRequest(); }
-  if (page === 'requests') loadRequests();
+  if (page === 'new') { loadRecentEnhanced(); resetNewRequest(); }
+  if (page === 'requests') loadRequestsEnhanced();
 }
 
 function toggleSidebar() {
@@ -53,7 +54,6 @@ function toggleNotifications() {
 function pushNotification(title, body, type = 'info') {
   notifications.unshift({ title, body, type, time: new Date() });
   renderNotifications();
-  // Show badge
   ['notifBadge','notifBadgeD'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'block';
@@ -84,7 +84,6 @@ async function loadDashboard() {
     const tasksData = await tasksRes.json();
     allTasks = tasksData.tasks || [];
 
-    // Bento stats
     const total = stats.total || 0;
     const completed = stats.by_status?.completed || 0;
     const eff = total > 0 ? ((completed / total) * 100).toFixed(1) : '98.4';
@@ -93,14 +92,12 @@ async function loadDashboard() {
     document.getElementById('effHint').textContent = `Optimized across ${total} active mandates`;
     document.getElementById('highRiskNum').textContent = stats.high_risk_count || 0;
 
-    // Mini pips
     const pips = document.getElementById('miniPips');
     if (pips) {
       const colors = ['#f0a500','#60a5fa','#34d399','#a78bfa','#ff6b6b'];
       pips.innerHTML = ['F','L','O','S','?'].map((l,i) => `<div class="mini-pip" style="background:${colors[i]}22;color:${colors[i]};border-color:${colors[i]}44">${l}</div>`).join('');
     }
 
-    // Bar chart
     const bc = document.getElementById('barChart');
     if (bc) {
       const pending = stats.by_status?.pending || 0;
@@ -110,7 +107,6 @@ async function loadDashboard() {
       bc.innerHTML = heights.map((h, i) => `<div class="bar-chart-bar${i===heights.length-1?' current':''}" style="height:${(h/max*100).toFixed(0)}%"></div>`).join('');
     }
 
-    // Ledger
     let filtered = allTasks;
     if (filter) filtered = allTasks.filter(t => t.status === filter);
     renderLedger(filtered);
@@ -159,9 +155,7 @@ function renderLedger(tasks) {
 }
 
 // ─────────────────────────────────────────────
-// SUBMIT REQUEST — TWO PHASE
-// Phase 1: AI extracts → show entity form
-// Phase 2: User confirms/edits → create task
+// SUBMIT REQUEST
 // ─────────────────────────────────────────────
 
 function resetNewRequest() {
@@ -174,7 +168,6 @@ function resetNewRequest() {
   pendingAIResult = null;
 }
 
-// Set up char counter
 document.addEventListener('DOMContentLoaded', () => {
   const ta = document.getElementById('requestInput');
   if (ta) {
@@ -185,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cc.style.color = n > 1800 ? 'var(--red)' : 'var(--text4)';
     });
   }
-  navigate('new'); // default page
+  navigate('dashboard');
 });
 
 async function submitRequest() {
@@ -203,7 +196,6 @@ async function submitRequest() {
   animateAISteps();
 
   try {
-    // Phase 1: call extraction-only via a preview (we call full API but show entity form first)
     const resp = await fetch(`${API}/tasks/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -213,17 +205,13 @@ async function submitRequest() {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Something went wrong');
 
-    // Store result
     pendingAIResult = data;
 
-    // Hide loader, show result immediately
     document.getElementById('aiLoader').style.display = 'none';
     clearAISteps();
 
-    // Show the entity form so user can review/edit
     showEntityForm(data);
-
-    loadRecent();
+    loadRecentEnhanced();
 
   } catch (e) {
     document.getElementById('aiLoader').style.display = 'none';
@@ -243,7 +231,6 @@ function showEntityForm(task) {
   const grid = document.getElementById('efGrid');
   const e = task.entities || {};
 
-  // Build editable fields for all non-null + important entities
   const fields = [
     { key: 'amount', label: 'Amount (KES)', type: 'number', val: e.amount },
     { key: 'recipient_name', label: 'Recipient Name', type: 'text', val: e.recipient_name },
@@ -256,7 +243,6 @@ function showEntityForm(task) {
     { key: 'urgency_reason', label: 'Urgency Reason', type: 'text', val: e.urgency_reason },
     { key: 'additional_notes', label: 'Additional Notes', type: 'text', val: e.additional_notes },
   ].filter(f => {
-    // Always show key fields for the intent
     if (['amount','recipient_name','recipient_phone','location'].includes(f.key)) return true;
     if (task.intent === 'hire_service' && f.key === 'service_type') return true;
     if (task.intent === 'verify_document' && f.key === 'document_type') return true;
@@ -279,7 +265,6 @@ function showEntityForm(task) {
 async function confirmAndCreate() {
   if (!pendingAIResult) return;
 
-  // Read edited values back
   const updatedEntities = { ...pendingAIResult.entities };
   const fields = ['amount','recipient_name','recipient_phone','recipient_relationship','location','service_type','document_type','scheduled_date','urgency_reason','additional_notes'];
   
@@ -292,17 +277,13 @@ async function confirmAndCreate() {
     }
   });
 
-  // Now update the task in DB with corrected entities
   const btn = document.getElementById('entityForm').querySelector('.confirm-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-sm"></span>Saving...';
 
   try {
-    // Patch entities via status endpoint (we'll use a PATCH on the task)
-    // For now, show the result with the user-edited entities applied locally
     const task = { ...pendingAIResult, entities: updatedEntities };
     
-    // Show full result
     document.getElementById('entityForm').style.display = 'none';
     document.getElementById('resultArea').style.display = 'block';
     document.getElementById('resultArea').innerHTML = renderResult(task);
@@ -323,95 +304,97 @@ async function confirmAndCreate() {
   }
 }
 
-function closeEntityForm() {
-  document.getElementById('entityForm').style.display = 'none';
-  pendingAIResult = null;
+// ─────────────────────────────────────────────
+// ENHANCED RECENT ANCHORS
+// ─────────────────────────────────────────────
+async function loadRecentEnhanced() {
+  const grid = document.getElementById('recentGrid');
+  if (!grid) return;
+  try {
+    const r = await fetch(`${API}/tasks/`);
+    const d = await r.json();
+    const tasks = (d.tasks || []).slice(0, 6);
+    if (!tasks.length) { grid.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined">inbox</span><p>No tasks yet. Submit your first request above!</p></div>`; return; }
+    grid.innerHTML = tasks.map(t => renderPremiumAnchorCard(t)).join('');
+  } catch (e) {
+    grid.innerHTML = '<p style="color:var(--text3);font-size:13px">Could not load recent tasks.</p>';
+  }
 }
 
-// ─────────────────────────────────────────────
-// RENDER RESULT CARD
-// ─────────────────────────────────────────────
-function renderResult(task) {
-  const e = task.entities || {};
-  const rColor = { low:'var(--green)', medium:'var(--amber)', high:'var(--red)' }[task.risk_level] || 'var(--text2)';
-
-  const entityItems = Object.entries(e)
-    .filter(([,v]) => v !== null && v !== undefined && v !== '' && v !== false)
-    .map(([k,v]) => `<div class="entity-chip"><div class="e-key">${fmtKey(k)}</div><div class="e-val">${fmtVal(k,v)}</div></div>`)
-    .join('');
-
-  const riskReasons = (task.risk_reasons||[]).map(r=>`<div class="risk-item">• ${r}</div>`).join('') || '<div class="risk-item">No significant risk factors.</div>';
-
-  const steps = (task.steps||[]).map(s=>`
-    <div class="step-row">
-      <div class="step-num">${s.step_number}</div>
-      <div><div class="step-t">${s.title}</div><div class="step-d">${s.description}</div></div>
-    </div>`).join('');
-
-  const msgs = {};
-  (task.messages||[]).forEach(m => msgs[m.channel] = m);
-
-  const tabId = `res_${task.task_code.replace('-','_')}`;
-
-  return `
-    <div class="result-card">
-      <div class="result-top">
-        <div style="flex:1">
-          <div class="result-code">${task.task_code}</div>
-          <div class="result-badges">
-            <span class="badge b-intent">${fmtIntent(task.intent)}</span>
-            <span class="badge b-${task.risk_level}">${task.risk_level.toUpperCase()} RISK</span>
-            <span class="badge b-${task.status}">${fmtStatus(task.status)}</span>
-          </div>
-          <div class="result-meta">
-            <span>👥 ${task.assigned_team} Team</span>
-            <span>🕐 ${fmtDate(task.created_at)}</span>
-          </div>
-        </div>
-        <div class="score-pill" style="border-color:${rColor}33">
-          <div class="score-num" style="color:${rColor}">${task.risk_score}</div>
-          <div class="score-lbl">Risk Score</div>
-        </div>
-      </div>
-      <div class="tabs">
-        <button class="tab active" onclick="switchTab(this,'${tabId}_overview')">Overview</button>
-        <button class="tab" onclick="switchTab(this,'${tabId}_steps')">Steps (${(task.steps||[]).length})</button>
-        <button class="tab" onclick="switchTab(this,'${tabId}_messages')">Messages</button>
-        <button class="tab" onclick="switchTab(this,'${tabId}_risk')">Risk Analysis</button>
-      </div>
-      <div class="tab-pane active" id="${tabId}_overview">
-        <p class="pane-lbl">Original Request</p>
-        <div class="summary-strip" style="margin-bottom:16px">${task.original_request}</div>
-        <p class="pane-lbl">Extracted Details</p>
-        <div class="entities-grid">${entityItems||'<p style="color:var(--text3)">No entities extracted.</p>'}</div>
-      </div>
-      <div class="tab-pane" id="${tabId}_steps">
-        <p class="pane-lbl">Fulfilment Steps</p>
-        <div class="steps-list">${steps||'<p style="color:var(--text3)">No steps generated.</p>'}</div>
-      </div>
-      <div class="tab-pane" id="${tabId}_messages">
-        <p class="pane-lbl">Confirmation Messages</p>
-        <div class="msgs-list">
-          ${msgs.whatsapp ? renderMsg('whatsapp','💬 WhatsApp',msgs.whatsapp) : ''}
-          ${msgs.email    ? renderMsg('email','📧 Email',msgs.email) : ''}
-          ${msgs.sms      ? renderMsg('sms','📱 SMS',msgs.sms) : ''}
-        </div>
-      </div>
-      <div class="tab-pane" id="${tabId}_risk">
-        <p class="pane-lbl">Risk Score: ${task.risk_score}/100 — ${task.risk_level.toUpperCase()}</p>
-        <div class="risk-list">${riskReasons}</div>
-      </div>
-    </div>`;
-}
-
-function renderMsg(channel, label, m) {
-  return `<div class="msg-card">
-    <div class="msg-top">
-      <span class="msg-channel mc-${channel}">${label}</span>
-      <button class="copy-btn" onclick="copyText(this,\`${esc(m.body)}\`)">Copy</button>
+function renderPremiumAnchorCard(t) {
+  const riskClass = t.risk_level;
+  return `<div class="anchor-card-premium ${riskClass}-risk" onclick="openModal('${t.task_code}')">
+    <div class="ac-premium-header">
+      <span class="ac-premium-code">${t.task_code}</span>
+      <span class="ac-premium-date">${fmtDate(t.created_at)}</span>
     </div>
-    ${m.subject ? `<div class="msg-subject">Subject: ${m.subject}</div>` : ''}
-    <div class="msg-body">${m.body}</div>
+    <div class="ac-premium-title">${fmtIntent(t.intent)}</div>
+    <div class="ac-premium-desc">${(t.original_request || '').slice(0, 100)}${(t.original_request || '').length > 100 ? '...' : ''}</div>
+    <div class="ac-premium-footer">
+      <div class="ac-premium-risk">
+        <span class="risk-indicator ${riskClass}"></span>
+        <span class="risk-num ${riskClass}">${t.risk_score}/100</span>
+      </div>
+      <span class="status-tag s-${t.status}">${fmtStatus(t.status)}</span>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
+// ENHANCED ALL REQUESTS
+// ─────────────────────────────────────────────
+async function loadRequestsEnhanced() {
+  const grid = document.getElementById('reqGrid');
+  grid.innerHTML = '<p class="recent-loading">Loading requests...</p>';
+  try {
+    const r = await fetch(`${API}/tasks/`);
+    const d = await r.json();
+    allTasks = d.tasks || [];
+    applyFiltersEnhanced();
+  } catch (e) {
+    grid.innerHTML = `<div class="err-box">⚠️ Failed to load tasks.</div>`;
+  }
+}
+
+function applyFiltersEnhanced() {
+  const status = document.getElementById('filterStatus')?.value || '';
+  const intent = document.getElementById('filterIntent')?.value || '';
+  const risk   = document.getElementById('filterRisk')?.value || '';
+  const filtered = allTasks.filter(t => {
+    if (status && t.status !== status) return false;
+    if (intent && t.intent !== intent) return false;
+    if (risk   && t.risk_level !== risk) return false;
+    return true;
+  });
+  renderReqGridEnhanced(filtered);
+}
+
+function renderReqGridEnhanced(tasks) {
+  const grid = document.getElementById('reqGrid');
+  if (!tasks.length) {
+    grid.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined">inbox</span><p>No tasks match your filters.</p></div>`;
+    return;
+  }
+  grid.innerHTML = tasks.map(t => renderPremiumTaskCard(t)).join('');
+}
+
+function renderPremiumTaskCard(t) {
+  const riskClass = t.risk_level;
+  const statusClass = t.status;
+  const teamClass = t.assigned_team;
+  return `<div class="task-card-premium" onclick="openModal('${t.task_code}')">
+    <div class="task-card-header">
+      <span class="task-card-code">${t.task_code}</span>
+      <span class="task-card-status s-${statusClass}">${fmtStatus(statusClass)}</span>
+    </div>
+    <div class="task-card-body">
+      <div class="task-card-intent">${fmtIntent(t.intent)}</div>
+      <div class="task-card-request">${(t.original_request || '').slice(0, 120)}${(t.original_request || '').length > 120 ? '...' : ''}</div>
+      <div class="task-card-meta">
+        <span class="task-card-team t-${teamClass}">${t.assigned_team}</span>
+        <span class="task-card-risk-score ${riskClass}">Risk: ${t.risk_score}/100</span>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -519,74 +502,6 @@ function renderTimeline(task) {
 }
 
 // ─────────────────────────────────────────────
-// ALL REQUESTS PAGE
-// ─────────────────────────────────────────────
-async function loadRequests() {
-  const grid = document.getElementById('reqGrid');
-  grid.innerHTML = '<p class="recent-loading">Loading...</p>';
-  try {
-    const r = await fetch(`${API}/tasks/`);
-    const d = await r.json();
-    allTasks = d.tasks || [];
-    applyFilters();
-  } catch (e) {
-    grid.innerHTML = `<div class="err-box">⚠️ Failed to load tasks.</div>`;
-  }
-}
-
-function applyFilters() {
-  const status = document.getElementById('filterStatus')?.value || '';
-  const intent = document.getElementById('filterIntent')?.value || '';
-  const risk   = document.getElementById('filterRisk')?.value || '';
-  const filtered = allTasks.filter(t => {
-    if (status && t.status !== status) return false;
-    if (intent && t.intent !== intent) return false;
-    if (risk   && t.risk_level !== risk) return false;
-    return true;
-  });
-  renderReqGrid(filtered);
-}
-
-function renderReqGrid(tasks) {
-  const grid = document.getElementById('reqGrid');
-  if (!tasks.length) {
-    grid.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined">inbox</span><p>No tasks match your filters.</p></div>`;
-    return;
-  }
-  grid.innerHTML = tasks.map(t => anchorCard(t)).join('');
-}
-
-function anchorCard(t) {
-  return `<div class="anchor-card ${t.risk_level}-risk" onclick="openModal('${t.task_code}')">
-    <div class="kenyan-bar"></div>
-    <div class="ac-top">
-      <span class="ac-code">${t.task_code}</span>
-      <span class="ac-date">${fmtDate(t.created_at)}</span>
-    </div>
-    <div class="ac-title">${fmtIntent(t.intent)}</div>
-    <div class="ac-desc">${t.original_request||''}</div>
-    <div class="ac-bottom">
-      <span class="status-tag s-${t.status}">${fmtStatus(t.status)}</span>
-      <span class="risk-num ${t.risk_level}">${t.risk_score}/100</span>
-    </div>
-  </div>`;
-}
-
-async function loadRecent() {
-  const grid = document.getElementById('recentGrid');
-  if (!grid) return;
-  try {
-    const r = await fetch(`${API}/tasks/`);
-    const d = await r.json();
-    const tasks = (d.tasks || []).slice(0, 6);
-    if (!tasks.length) { grid.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined">inbox</span><p>No tasks yet. Submit your first request above!</p></div>`; return; }
-    grid.innerHTML = tasks.map(t => anchorCard(t)).join('');
-  } catch (e) {
-    grid.innerHTML = '<p style="color:var(--text3);font-size:13px">Could not load recent tasks.</p>';
-  }
-}
-
-// ─────────────────────────────────────────────
 // STATUS UPDATE
 // ─────────────────────────────────────────────
 async function updateStatus(code, newStatus) {
@@ -600,10 +515,11 @@ async function updateStatus(code, newStatus) {
     const t = allTasks.find(x => x.task_code === code);
     if (t) t.status = newStatus;
     showToast(`${code} → ${fmtStatus(newStatus)}`, 'success');
-    // Reload tracking if we're on that page
     const trackInput = document.getElementById('trackInput');
     if (trackInput && trackInput.value.toUpperCase() === code) lookupTask();
     loadDashboard();
+    loadRecentEnhanced();
+    loadRequestsEnhanced();
   } catch (e) {
     showToast('Failed to update status.', 'error');
   }
@@ -643,6 +559,93 @@ function switchTab(btn, panelId) {
   btn.classList.add('active');
   const panel = document.getElementById(panelId);
   if (panel) panel.classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+// RENDER RESULT CARD
+// ─────────────────────────────────────────────
+function renderResult(task) {
+  const e = task.entities || {};
+  const rColor = { low:'var(--green)', medium:'var(--amber)', high:'var(--red)' }[task.risk_level] || 'var(--text2)';
+
+  const entityItems = Object.entries(e)
+    .filter(([,v]) => v !== null && v !== undefined && v !== '' && v !== false)
+    .map(([k,v]) => `<div class="entity-chip"><div class="e-key">${fmtKey(k)}</div><div class="e-val">${fmtVal(k,v)}</div></div>`)
+    .join('');
+
+  const riskReasons = (task.risk_reasons||[]).map(r=>`<div class="risk-item">• ${r}</div>`).join('') || '<div class="risk-item">No significant risk factors.</div>';
+
+  const steps = (task.steps||[]).map(s=>`
+    <div class="step-row">
+      <div class="step-num">${s.step_number}</div>
+      <div><div class="step-t">${s.title}</div><div class="step-d">${s.description}</div></div>
+    </div>`).join('');
+
+  const msgs = {};
+  (task.messages||[]).forEach(m => msgs[m.channel] = m);
+
+  const tabId = `res_${task.task_code.replace('-','_')}`;
+
+  return `
+    <div class="result-card">
+      <div class="result-top">
+        <div style="flex:1">
+          <div class="result-code">${task.task_code}</div>
+          <div class="result-badges">
+            <span class="badge b-intent">${fmtIntent(task.intent)}</span>
+            <span class="badge b-${task.risk_level}">${task.risk_level.toUpperCase()} RISK</span>
+            <span class="badge b-${task.status}">${fmtStatus(task.status)}</span>
+          </div>
+          <div class="result-meta">
+            <span>👥 ${task.assigned_team} Team</span>
+            <span>🕐 ${fmtDate(task.created_at)}</span>
+          </div>
+        </div>
+        <div class="score-pill" style="border-color:${rColor}33">
+          <div class="score-num" style="color:${rColor}">${task.risk_score}</div>
+          <div class="score-lbl">Risk Score</div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'${tabId}_overview')">Overview</button>
+        <button class="tab" onclick="switchTab(this,'${tabId}_steps')">Steps (${(task.steps||[]).length})</button>
+        <button class="tab" onclick="switchTab(this,'${tabId}_messages')">Messages</button>
+        <button class="tab" onclick="switchTab(this,'${tabId}_risk')">Risk Analysis</button>
+      </div>
+      <div class="tab-pane active" id="${tabId}_overview">
+        <p class="pane-lbl">Original Request</p>
+        <div class="summary-strip" style="margin-bottom:16px">${task.original_request}</div>
+        <p class="pane-lbl">Extracted Details</p>
+        <div class="entities-grid">${entityItems||'<p style="color:var(--text3)">No entities extracted.</p>'}</div>
+      </div>
+      <div class="tab-pane" id="${tabId}_steps">
+        <p class="pane-lbl">Fulfilment Steps</p>
+        <div class="steps-list">${steps||'<p style="color:var(--text3)">No steps generated.</p>'}</div>
+      </div>
+      <div class="tab-pane" id="${tabId}_messages">
+        <p class="pane-lbl">Confirmation Messages</p>
+        <div class="msgs-list">
+          ${msgs.whatsapp ? renderMsg('whatsapp','💬 WhatsApp',msgs.whatsapp) : ''}
+          ${msgs.email    ? renderMsg('email','📧 Email',msgs.email) : ''}
+          ${msgs.sms      ? renderMsg('sms','📱 SMS',msgs.sms) : ''}
+        </div>
+      </div>
+      <div class="tab-pane" id="${tabId}_risk">
+        <p class="pane-lbl">Risk Score: ${task.risk_score}/100 — ${task.risk_level.toUpperCase()}</p>
+        <div class="risk-list">${riskReasons}</div>
+      </div>
+    </div>`;
+}
+
+function renderMsg(channel, label, m) {
+  return `<div class="msg-card">
+    <div class="msg-top">
+      <span class="msg-channel mc-${channel}">${label}</span>
+      <button class="copy-btn" onclick="copyText(this,\`${esc(m.body)}\`)">Copy</button>
+    </div>
+    ${m.subject ? `<div class="msg-subject">Subject: ${m.subject}</div>` : ''}
+    <div class="msg-body">${m.body}</div>
+  </div>`;
 }
 
 // ─────────────────────────────────────────────
