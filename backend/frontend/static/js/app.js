@@ -4,7 +4,15 @@
  * Enhanced with premium card layouts
  */
 
-const API = 'http://127.0.0.1:8000/api';
+// Dynamic API URL - works on localhost AND Render
+const API = (() => {
+  // If we're on Render (or any production domain), use relative path
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return '/api';
+  }
+  // Local development
+  return 'http://127.0.0.1:8000/api';
+})();
 
 let allTasks = [];
 let pendingAIResult = null;
@@ -112,7 +120,8 @@ async function loadDashboard() {
     renderLedger(filtered);
 
   } catch (e) {
-    document.getElementById('ledgerBody').innerHTML = `<tr><td colspan="6" class="tload" style="color:var(--red)">Failed to load. Is the backend running?</td></tr>`;
+    console.error('Dashboard error:', e);
+    document.getElementById('ledgerBody').innerHTML = `<tr><td colspan="6" class="tload" style="color:var(--red)">Failed to load. Make sure the backend is running.${window.location.hostname !== 'localhost' ? ' Check if your Render service is deployed correctly.' : ''}</td></tr>`;
   }
 }
 
