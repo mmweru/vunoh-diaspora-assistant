@@ -32,11 +32,11 @@ Return ONLY: {"whatsapp":"<msg>","email":"Subject: <subj>\\n\\n<body>","sms":"<m
 
 def _call_groq(system_prompt, user_content, max_tokens=1000):
     api_key = getattr(settings, 'GROQ_API_KEY', None)
-    
+
     if not api_key or api_key == '':
         logger.error("GROQ_API_KEY not configured in settings")
         raise Exception("GROQ_API_KEY not set. Please add GROQ_API_KEY to your Django settings.")
-    
+
     resp = requests.post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -46,6 +46,8 @@ def _call_groq(system_prompt, user_content, max_tokens=1000):
         ], "temperature": 0.1, "max_tokens": max_tokens},
         timeout=30
     )
+    resp.raise_for_status()  # Raise on 4xx/5xx Groq errors
+    return resp.json()['choices'][0]['message']['content']  # ← was missing entirely
 
 
 def _parse(raw):
@@ -84,13 +86,13 @@ def generate_steps(intent, entities, summary):
 def generate_messages(task_code, intent, summary, entities):
     if not getattr(settings, 'GROQ_API_KEY', ''):
         return _mock_messages(task_code, summary, intent, entities)
-    
+
     parts = []
     if entities.get('amount'): parts.append(f"KES {entities['amount']:,}")
     if entities.get('recipient_name'): parts.append(f"Recipient: {entities['recipient_name']}")
     if entities.get('location'): parts.append(f"Location: {entities['location']}")
     if entities.get('urgency'): parts.append("URGENT")
-    
+
     try:
         msgs = _parse(_call_groq(MESSAGES_SYSTEM_PROMPT, f"Task: {task_code}\nIntent: {intent}\nSummary: {summary}\nDetails: {', '.join(parts)}"))
         if not isinstance(msgs, dict): raise ValueError("not a dict")
@@ -113,17 +115,17 @@ def _mock_extraction(message):
     else: intent='hire_service'
 
     urgency = any(w in msg for w in ['urgent','asap','immediately','emergency','now','today','tonight'])
-    
+
     amount = None
     for pat in [r'kes\s*([\d,]+)', r'ksh\s*([\d,]+)', r'([\d,]+)\s*kes', r'([\d,]+)\s*ksh']:
         m = re.search(pat, msg)
         if m:
             try: amount = int(m.group(1).replace(',','')); break
             except: pass
-    
+
     pm = re.search(r'(07\d{8}|01\d{8}|\+2547\d{8})', message)
     phone = pm.group(0) if pm else None
-    
+
     recipient_name, recipient_rel = None, None
     rels = ['mother','mum','mama','dad','father','baba','sister','brother','wife','husband','friend','uncle','aunt','cousin','landlord']
     for rel in rels:
@@ -135,7 +137,7 @@ def _mock_extraction(message):
     if not recipient_name:
         m = re.search(r'\bto\s+([A-Z][a-z]+ [A-Z][a-z]+)\b', message)
         if m: recipient_name = m.group(1)
-    
+
     location = None
     for loc in ['nairobi','mombasa','kisumu','nakuru','eldoret','thika','kitale','nyeri','westlands','karen','kilimani','ruiru','kiambu','parklands','upperhill','kasarani','embakasi']:
         if loc in msg: location = loc.title(); break
@@ -146,7 +148,7 @@ def _mock_extraction(message):
         elif 'logbook' in msg: doc_type='vehicle logbook'
         elif 'id' in msg: doc_type='national ID'
         else: doc_type='document'
-    
+
     service_type = None
     if intent == 'hire_service':
         if any(w in msg for w in ['clean','cleaner']): service_type='cleaning'
@@ -211,12 +213,12 @@ def _mock_messages(task_code, summary, intent='', entities=None):
     emoji = {'send_money':'💸','hire_service':'🛠️','verify_document':'📄','get_airport_transfer':'✈️','check_status':'🔍'}.get(intent,'📋')
     urgency = entities.get('urgency', False)
     urgent_note = "\n\n⚡ *Marked URGENT* — we're prioritising this." if urgency else ""
-    
+
     email_body = f"Subject: Task Confirmation — {task_code}\n\nDear Customer,\n\nThank you for using Vunoh Global. Your request has been received.\n\nTask Reference: {task_code}\nSummary: {summary}"
     if urgency:
         email_body += "\n\nThis is flagged URGENT and will be prioritised."
     email_body += "\n\nWe will contact you within 24 hours.\n\nWarm regards,\nVunoh Global Support Team"
-    
+
     return {
         'whatsapp': f"{emoji} Hi! We've received your request.\n\n*Summary:* {summary}\n*Task Code:* `{task_code}`{urgent_note}\n\nOur team is on it. Reply with your task code anytime to check status. 🇰🇪",
         'email': email_body,

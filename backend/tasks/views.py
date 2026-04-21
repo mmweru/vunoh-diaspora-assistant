@@ -1,10 +1,10 @@
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 import logging
 from django.db.models import Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import AllowAny
 
 from .models import Task, TaskStep, TaskMessage, StatusHistory
 from .serializers import (
@@ -18,8 +18,22 @@ from .assignment_service import assign_team
 logger = logging.getLogger(__name__)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class TaskListCreateView(APIView):
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """
+    DRF's SessionAuthentication enforces CSRF even when the view is csrf_exempt.
+    This subclass skips the CSRF check entirely for API endpoints.
+    """
+    def enforce_csrf(self, request):
+        return  # No-op: skip CSRF enforcement
+
+
+class PublicAPIView(APIView):
+    """Base class for all public API views — no auth, no CSRF."""
+    authentication_classes = [CsrfExemptSessionAuthentication]
+    permission_classes = [AllowAny]
+
+
+class TaskListCreateView(PublicAPIView):
     """
     GET  /api/tasks/  — list all tasks
     POST /api/tasks/  — create a new task from a customer message
@@ -27,6 +41,12 @@ class TaskListCreateView(APIView):
 
     def get(self, request):
         tasks = Task.objects.all()
+
+        # Optional status filter
+        status_filter = request.query_params.get('status', '')
+        if status_filter:
+            tasks = tasks.filter(status=status_filter)
+
         serializer = TaskListSerializer(tasks, many=True)
         return Response({
             'count': tasks.count(),
@@ -136,8 +156,7 @@ class TaskListCreateView(APIView):
             )
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class TaskDetailView(APIView):
+class TaskDetailView(PublicAPIView):
     """
     GET /api/tasks/<task_code>/ — retrieve full task details
     """
@@ -154,8 +173,7 @@ class TaskDetailView(APIView):
         return Response(serializer.data)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class TaskStatusUpdateView(APIView):
+class TaskStatusUpdateView(PublicAPIView):
     """
     PATCH /api/tasks/<task_code>/status/ — update task status
     """
@@ -204,8 +222,7 @@ class TaskStatusUpdateView(APIView):
         })
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class DashboardStatsView(APIView):
+class DashboardStatsView(PublicAPIView):
     """
     GET /api/tasks/stats/ — summary stats for the dashboard header
     """
